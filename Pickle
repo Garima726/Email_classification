@@ -1,0 +1,42 @@
+import streamlit as st
+import pickle
+import string
+from nltk.tokenize import word_tokenize
+from nltk.stem import PorterStemmer
+import re
+from bs4 import BeautifulSoup
+from nltk.corpus import stopwords
+from sklearn.preprocessing import MinMaxScaler
+
+vector = pickle.load(open('vector.pkl','rb'))
+model = pickle.load(open('Algo.pkl','rb'))
+
+punc = string.punctuation
+stemmer = PorterStemmer()
+stop_words = stopwords.words('english')
+scaler = MinMaxScaler()
+
+st.title('SMS Prediction')
+msg = st.text_area('Enter your message here')
+if st.button('Predict'):
+    msg = msg.lower()
+    soup = BeautifulSoup(msg, 'html.parser')
+    msg = soup.get_text(separator=' ')
+
+    msg = re.sub(r'http\S+', '', msg)
+    msg_punc = [i for i in msg  if i not in punc]
+    msg_punc = ''.join(msg_punc)
+    msg = word_tokenize(msg_punc)
+    msg_words = [i for i in msg if i not in stop_words]
+    msg = ' '.join(msg_words)
+    msg_stem = [stemmer.stem(i) for i in msg]
+    msg = ''.join(msg_stem)
+    transformed_vector = vector.transform([msg])
+
+    pred = model.predict(transformed_vector)
+    if pred == 0:
+        pred = 'Ham'
+    else:
+        pred = 'Spam'
+
+    st.title(pred)
